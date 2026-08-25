@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Team Task Board</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a1929;
+    color: #fff;
+    font-family: 'Segoe UI', sans-serif;
+    padding: 20px;
+    min-height: 100vh;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #1976d2;
+    padding-bottom: 15px;
+    margin-bottom: 25px;
+  }
+  h1 { font-size: 2.5em; }
+  #clock { font-size: 2em; color: #64b5f6; }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+  }
+  .category {
+    background: #132f4c;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .category h2 {
+    color: #64b5f6;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #1e4976;
+    padding-bottom: 8px;
+  }
+  .task {
+    background: #1e3a5f;
+    border-left: 4px solid #64b5f6;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .task:hover { background: #244b7a; transform: translateX(3px); }
+  .task.done {
+    opacity: 0.5;
+    text-decoration: line-through;
+    border-left-color: #4caf50;
+  }
+  .task.livello-Alta { border-left-color: #f44336; }
+  .task.livello-Media { border-left-color: #ff9800; }
+  .task.livello-Bassa { border-left-color: #4caf50; }
+  .task-info { flex: 1; }
+  .task-meta { font-size: 0.85em; color: #90caf9; margin-top: 4px; }
+  .checkbox {
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+  }
+  #status { color: #f44336; margin: 20px 0; }
+  .loading { text-align: center; padding: 40px; color: #64b5f6; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📋 Team Task Board</h1>
+  <div id="clock">--:--:--</div>
+</header>
+
+<div id="status"></div>
+<div id="board" class="board">
+  <div class="loading">⏳ Caricamento tasks...</div>
+</div>
+
+<script>
+  // 🔴 SOSTITUISCI CON IL TUO URL Apps Script
+  const API_URL = 'https://script.google.com/macros/s/AKfycbzWplByZ9asXeAMKzQyak1IG3kIaGQ5ukxbFwOeUwBIZWaz9hZA0LMEB-8NPCRnlSnzZg/exec';
+
+  const AUTO_REFRESH_MS = 30000; // Ricarica ogni 30 secondi
+
+  function updateClock() {
+    document.getElementById('clock').textContent = 
+      new Date().toLocaleTimeString('it-IT');
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  async function loadTasks() {
+    try {
+      const res = await fetch(API_URL);
+      const json = await res.json();
+      if (json.status === 'ok') renderBoard(json.data);
+      else showError('Errore: ' + json.message);
+    } catch (err) {
+      showError('Errore caricamento: ' + err.message);
+    }
+  }
+
+  function renderBoard(tasks) {
+    document.getElementById('status').textContent = '';
+    const board = document.getElementById('board');
+    board.innerHTML = '';
+
+    // Raggruppa per categoria
+    const categorie = {};
+    tasks.forEach(t => {
+      if (!categorie[t.Categoria]) categorie[t.Categoria] = [];
+      categorie[t.Categoria].push(t);
+    });
+
+    // Ordina task per livello (Alta > Media > Bassa)
+    const ordineL = { 'Alta': 1, 'Media': 2, 'Bassa': 3 };
+
+    Object.keys(categorie).sort().forEach(cat => {
+      const div = document.createElement('div');
+      div.className = 'category';
+      div.innerHTML = `<h2>${cat}</h2>`;
+
+      categorie[cat]
+        .sort((a, b) => (ordineL[a.Livello] || 9) - (ordineL[b.Livello] || 9))
+        .forEach(t => {
+          const isDone = t.Completato === true || t.Completato === 'TRUE';
+          const taskEl = document.createElement('div');
+          taskEl.className = `task livello-${t.Livello} ${isDone ? 'done' : ''}`;
+          taskEl.innerHTML = `
+            <input type="checkbox" class="checkbox" ${isDone ? 'checked' : ''} 
+                   onchange="toggleTask(${t.ID}, this.checked)">
+            <div class="task-info">
+              <div><strong>${t.Task}</strong></div>
+              <div class="task-meta">👤 ${t.Assegnato || 'N/A'} | 
+                   🎯 ${t.Livello || 'N/A'} | 
+                   📅 ${t.Data || 'N/A'}</div>
+            </div>
+          `;
+          div.appendChild(taskEl);
+        });
+      board.appendChild(div);
+    });
+  }
+
+  async function toggleTask(id, completed) {
+    try {
+      await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ id: id, completed: completed })
+      });
+      // Ricarica per confermare
+      setTimeout(loadTasks, 500);
+    } catch (err) {
+      showError('Errore aggiornamento: ' + err.message);
+    }
+  }
+
+  function showError(msg) {
+    document.getElementById('status').textContent = msg;
+  }
+
+  loadTasks();
+  setInterval(loadTasks, AUTO_REFRESH_MS);
+</script>
+
+</body>
+</html>
