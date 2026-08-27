@@ -248,6 +248,40 @@
   .summary-card.warning .summary-count {
     color: #ff9800;
   }
+ .watermark {
+  position: fixed;
+  bottom: 15px;
+  right: 20px;
+  font-size: 0.75em;
+  color: #90a4ae;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  z-index: 1000;
+  font-family: 'Segoe UI', sans-serif;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.watermark:hover {
+  color: #1976d2;
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.watermark .version {
+  font-weight: bold;
+  color: #1976d2;
+}
+
+.watermark .author {
+  font-style: italic;
+}
 </style>
 </head>
 <body>
@@ -571,6 +605,10 @@
   loadTasks();
   setInterval(loadTasks, AUTO_REFRESH_MS);
 </script>
+
+<div class="watermark">
+  <span class="version">Versione 1.0</span> by <span class="author">mmantone</span>
+</div>
 
 </body>
 </html>
