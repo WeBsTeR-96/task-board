@@ -45,8 +45,7 @@
     padding: 12px;
     margin-bottom: 10px;
     border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -55,7 +54,7 @@
   .task.done {
     opacity: 0.5;
     text-decoration: line-through;
-    border-left-color: #4caf50;
+    border-left-color: #4caf50 !important;
   }
   .task.livello-Alta { border-left-color: #f44336; }
   .task.livello-Media { border-left-color: #ff9800; }
@@ -67,8 +66,16 @@
     height: 22px;
     cursor: pointer;
   }
+  .checkbox:disabled { cursor: wait; opacity: 0.5; }
   #status { color: #f44336; margin: 20px 0; }
   .loading { text-align: center; padding: 40px; color: #64b5f6; }
+  .saving-indicator {
+    display: inline-block;
+    margin-left: 8px;
+    color: #ff9800;
+    font-size: 0.75em;
+    font-style: italic;
+  }
 </style>
 </head>
 <body>
@@ -84,10 +91,11 @@
 </div>
 
 <script>
-  // 🔴 SOSTITUISCI CON IL TUO URL Apps Script
+  // 🔴 IL TUO URL Apps Script
   const API_URL = 'https://script.google.com/macros/s/AKfycbzWplByZ9asXeAMKzQyak1IG3kIaGQ5ukxbFwOeUwBIZWaz9hZA0LMEB-8NPCRnlSnzZg/exec';
 
-  const AUTO_REFRESH_MS = 30000; // Ricarica ogni 30 secondi
+  const AUTO_REFRESH_MS = 30000; // 30 secondi
+  let isUpdating = false; // Blocca refresh durante update
 
   function updateClock() {
     document.getElementById('clock').textContent = 
@@ -97,22 +105,32 @@
   updateClock();
 
   async function loadTasks() {
+    if (isUpdating) return; // Non aggiornare durante una modifica
+
     try {
       const res = await fetch(API_URL);
       const json = await res.json();
-      if (json.status === 'ok') renderBoard(json.data);
-      else showError('Errore: ' + json.message);
+      if (json.status === 'ok') {
+        console.log('✅ Dati ricevuti:', json.data);
+        renderBoard(json.data);
+      } else {
+        showError('Errore: ' + json.message);
+      }
     } catch (err) {
       showError('Errore caricamento: ' + err.message);
     }
   }
 
- function renderBoard(tasks) {
+  function renderBoard(tasks) {
     document.getElementById('status').textContent = '';
     const board = document.getElementById('board');
     board.innerHTML = '';
 
-    // Raggruppa per categoria
+    if (!tasks || tasks.length === 0) {
+      board.innerHTML = '<div class="loading">📭 Nessuna task trovata nel Sheet</div>';
+      return;
+    }
+
     const categorie = {};
     tasks.forEach(t => {
       const cat = t.Categoria || 'Altro';
@@ -120,7 +138,6 @@
       categorie[cat].push(t);
     });
 
-    // Ordina task per livello (Alta > Media > Bassa)
     const ordineL = { 'Alta': 1, 'Media': 2, 'Bassa': 3 };
 
     Object.keys(categorie).sort().forEach(cat => {
@@ -133,15 +150,18 @@
         .forEach(t => {
           const isDone = t.Stato === true || t.Stato === 'TRUE' || t.Stato === 'Completato';
           const livello = t.Livello || 'Media';
+          const taskText = t.Task || 'Senza descrizione';
+          const assegnato = t.Assegnato || 'Non assegnato';
+
           const taskEl = document.createElement('div');
           taskEl.className = `task livello-${livello} ${isDone ? 'done' : ''}`;
+          taskEl.dataset.taskId = t.ID;
           taskEl.innerHTML = `
             <input type="checkbox" class="checkbox" ${isDone ? 'checked' : ''} 
-                   onchange="toggleTask(${t.ID}, this.checked)">
+                   onchange="toggleTask(${t.ID}, this.checked, this)">
             <div class="task-info">
-              <div><strong>${t.Task || 'Senza descrizione'}</strong></div>
-              <div class="task-meta">👤 ${t.Assegnato || 'Non assegnato'} | 
-                   🎯 ${livello}</div>
+              <div><strong>${taskText}</strong><span class="saving-indicator" style="display:none">💾 Salvataggio...</span></div>
+              <div class="task-meta">👤 ${assegnato} | 🎯 ${livello}</div>
             </div>
           `;
           div.appendChild(taskEl);
@@ -150,21 +170,58 @@
     });
   }
 
-  async function toggleTask(id, completed) {
+  async function toggleTask(id, completed, checkbox) {
+    isUpdating = true; // Blocca auto-refresh
+    checkbox.disabled = true;
+
+    // Mostra indicatore di salvataggio
+    const savingIndicator = checkbox.parentElement.querySelector('.saving-indicator');
+    if (savingIndicator) savingIndicator.style.display = 'inline';
+
     try {
-      await fetch(API_URL, {
+      // ⚠️ IMPORTANTE: Usiamo text/plain per aggirare CORS preflight di Apps Script
+      const response = await fetch(API_URL, {
         method: 'POST',
-        body: JSON.stringify({ id: id, completed: completed })
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: JSON.stringify({ 
+          id: id, 
+          completed: completed 
+        })
       });
-      // Ricarica per confermare
-      setTimeout(loadTasks, 500);
+
+      const result = await response.json();
+      console.log('✅ Risposta update:', result);
+
+      if (result.status === 'ok') {
+        // Aggiorna visualmente la task
+        const taskEl = checkbox.closest('.task');
+        if (completed) {
+          taskEl.classList.add('done');
+        } else {
+          taskEl.classList.remove('done');
+        }
+      } else {
+        showError('Errore aggiornamento: ' + result.message);
+        checkbox.checked = !completed; // Ripristina stato
+      }
     } catch (err) {
+      console.error('❌ Errore:', err);
       showError('Errore aggiornamento: ' + err.message);
+      checkbox.checked = !completed;
+    } finally {
+      checkbox.disabled = false;
+      if (savingIndicator) savingIndicator.style.display = 'none';
+      isUpdating = false;
     }
   }
 
   function showError(msg) {
     document.getElementById('status').textContent = msg;
+    setTimeout(() => {
+      document.getElementById('status').textContent = '';
+    }, 5000);
   }
 
   loadTasks();
