@@ -32,6 +32,32 @@
     color: #90caf9; 
     margin-top: 4px;
   }
+  #refreshBtn {
+    margin-top: 8px;
+    background: #1976d2;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.2s;
+  }
+  #refreshBtn:hover {
+    background: #1565c0;
+    transform: scale(1.05);
+  }
+  #refreshBtn:active { transform: scale(0.95); }
+  #refreshBtn.loading {
+    background: #ff9800;
+    cursor: wait;
+  }
+  #lastUpdate {
+    font-size: 0.75em;
+    color: #78909c;
+    margin-top: 4px;
+    font-style: italic;
+  }
   .board {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -93,6 +119,15 @@
   @keyframes pulse-orange {
     0%, 100% { box-shadow: 0 0 5px rgba(255, 87, 34, 0.4); }
     50% { box-shadow: 0 0 15px rgba(255, 87, 34, 0.7); }
+  }
+
+  /* Highlight quando la task cambia stato da sheet */
+  @keyframes flash-update {
+    0% { background: #4caf50; }
+    100% { background: inherit; }
+  }
+  .task.just-updated {
+    animation: flash-update 1.5s ease-out;
   }
 
   .task-info { flex: 1; }
@@ -158,6 +193,8 @@
   <div class="datetime-container">
     <div id="clock">--:--:--</div>
     <div id="date">-- ------ ----</div>
+    <button id="refreshBtn" onclick="manualRefresh()">🔄 Aggiorna</button>
+    <div id="lastUpdate">Ultimo aggiornamento: --</div>
   </div>
 </header>
 
@@ -170,11 +207,12 @@
 <script>
   const API_URL = 'https://script.google.com/macros/s/AKfycbzWplByZ9asXeAMKzQyak1IG3kIaGQ5ukxbFwOeUwBIZWaz9hZA0LMEB-8NPCRnlSnzZg/exec';
 
-  const AUTO_REFRESH_MS = 30000;
+  const AUTO_REFRESH_MS = 15000; // ⚡ 15 secondi per aggiornamenti più reattivi
   const GIORNI_IMMINENTE = 3;
   const GIORNI_OGGI = 1;
 
   let isUpdating = false;
+  let lastTaskStates = {}; // Traccia stato precedente per animazioni
 
   function updateDateTime() {
     const now = new Date();
@@ -191,7 +229,12 @@
   setInterval(updateDateTime, 1000);
   updateDateTime();
 
-  // 📅 Formatta data in DD-MM
+  function updateLastUpdateTime() {
+    const now = new Date();
+    document.getElementById('lastUpdate').textContent = 
+      'Ultimo aggiornamento: ' + now.toLocaleTimeString('it-IT');
+  }
+
   function formatDataDDMM(dataString) {
     if (!dataString) return '';
     const data = new Date(dataString);
@@ -204,7 +247,6 @@
 
   function calcolaGiorniMancanti(scadenza) {
     if (!scadenza) return null;
-
     const dataScadenza = new Date(scadenza);
     if (isNaN(dataScadenza.getTime())) return null;
 
@@ -226,7 +268,6 @@
 
   function getScadenzaBadge(giorniMancanti, scadenza, isDone) {
     if (!scadenza) return '';
-
     const dataFormattata = formatDataDDMM(scadenza);
     if (!dataFormattata) return '';
 
@@ -258,6 +299,16 @@
     return `<span class="due-badge ${classe}">${testo}</span>`;
   }
 
+  function isTaskDone(t) {
+    return t.Stato === true 
+        || t.Stato === 'TRUE' 
+        || t.Stato === 'VERO'
+        || t.Stato === 'Completato'
+        || t.Stato === 1
+        || String(t.Stato).toLowerCase() === 'true'
+        || String(t.Stato).toLowerCase() === 'vero';
+  }
+
   async function loadTasks() {
     if (isUpdating) return;
 
@@ -266,8 +317,10 @@
       const json = await res.json();
       if (json.status === 'ok') {
         console.log('✅ Dati ricevuti:', json.data);
+        detectChanges(json.data);
         renderBoard(json.data);
         updateSummary(json.data);
+        updateLastUpdateTime();
       } else {
         showError('Errore: ' + json.message);
       }
@@ -276,15 +329,48 @@
     }
   }
 
+  async function manualRefresh() {
+    const btn = document.getElementById('refreshBtn');
+    btn.classList.add('loading');
+    btn.textContent = '⏳ Aggiorno...';
+
+    await loadTasks();
+
+    btn.classList.remove('loading');
+    btn.textContent = '🔄 Aggiorna';
+  }
+
+  // 🔔 Rileva task che sono cambiate dall'ultimo refresh
+  function detectChanges(tasks) {
+    const newStates = {};
+    const changedTasks = [];
+
+    tasks.forEach(t => {
+      const currentDone = isTaskDone(t);
+      newStates[t.ID] = currentDone;
+
+      if (lastTaskStates.hasOwnProperty(t.ID) && lastTaskStates[t.ID] !== currentDone) {
+        changedTasks.push({ id: t.ID, task: t.Task, done: currentDone });
+      }
+    });
+
+    // Log delle modifiche esterne
+    if (changedTasks.length > 0) {
+      changedTasks.forEach(c => {
+        console.log(`🔄 Task cambiata dal Sheet: "${c.task}" → ${c.done ? '✅ completata' : '⬜ da fare'}`);
+      });
+    }
+
+    lastTaskStates = newStates;
+    return changedTasks.map(c => c.id);
+  }
+
   function updateSummary(tasks) {
     const summary = document.getElementById('summary');
-
     let scadute = 0, imminenti = 0, oggi = 0, completate = 0, totali = 0;
 
     tasks.forEach(t => {
-      const isDone = t.Stato === true || t.Stato === 'TRUE' || 
-                     t.Stato === 'VERO' || t.Stato === 1;
-      if (isDone) { completate++; return; }
+      if (isTaskDone(t)) { completate++; return; }
 
       totali++;
       const giorni = calcolaGiorniMancanti(t.Scadenza);
@@ -297,26 +383,16 @@
 
     let html = '';
     if (scadute > 0) {
-      html += `<div class="summary-card critical">
-        🚨 <span class="summary-count">${scadute}</span> Scadute
-      </div>`;
+      html += `<div class="summary-card critical">🚨 <span class="summary-count">${scadute}</span> Scadute</div>`;
     }
     if (oggi > 0) {
-      html += `<div class="summary-card critical">
-        ⏰ <span class="summary-count">${oggi}</span> Oggi/Domani
-      </div>`;
+      html += `<div class="summary-card critical">⏰ <span class="summary-count">${oggi}</span> Oggi/Domani</div>`;
     }
     if (imminenti > 0) {
-      html += `<div class="summary-card warning">
-        ⚠️ <span class="summary-count">${imminenti}</span> Imminenti (${GIORNI_IMMINENTE}g)
-      </div>`;
+      html += `<div class="summary-card warning">⚠️ <span class="summary-count">${imminenti}</span> Imminenti (${GIORNI_IMMINENTE}g)</div>`;
     }
-    html += `<div class="summary-card info">
-      ✅ <span class="summary-count">${completate}</span> Completate
-    </div>`;
-    html += `<div class="summary-card info">
-      📋 <span class="summary-count">${totali}</span> Aperte
-    </div>`;
+    html += `<div class="summary-card info">✅ <span class="summary-count">${completate}</span> Completate</div>`;
+    html += `<div class="summary-card info">📋 <span class="summary-count">${totali}</span> Aperte</div>`;
 
     summary.innerHTML = html;
   }
@@ -349,30 +425,17 @@
         .sort((a, b) => {
           const giorniA = calcolaGiorniMancanti(a.Scadenza);
           const giorniB = calcolaGiorniMancanti(b.Scadenza);
-
-          const isDoneA = a.Stato === true || a.Stato === 'TRUE' || a.Stato === 'VERO';
-          const isDoneB = b.Stato === true || b.Stato === 'TRUE' || b.Stato === 'VERO';
+          const isDoneA = isTaskDone(a);
+          const isDoneB = isTaskDone(b);
 
           if (isDoneA !== isDoneB) return isDoneA ? 1 : -1;
-
           if (giorniA === null && giorniB !== null) return 1;
           if (giorniA !== null && giorniB === null) return -1;
-
-          if (giorniA !== null && giorniB !== null) {
-            return giorniA - giorniB;
-          }
-
+          if (giorniA !== null && giorniB !== null) return giorniA - giorniB;
           return (ordineL[a.Livello] || 9) - (ordineL[b.Livello] || 9);
         })
         .forEach(t => {
-          const isDone = t.Stato === true 
-                      || t.Stato === 'TRUE' 
-                      || t.Stato === 'VERO'
-                      || t.Stato === 'Completato'
-                      || t.Stato === 1
-                      || String(t.Stato).toLowerCase() === 'true'
-                      || String(t.Stato).toLowerCase() === 'vero';
-
+          const isDone = isTaskDone(t);
           const livello = t.Livello || 'Media';
           const taskText = t.Task || 'Senza descrizione';
           const assegnato = t.Assegnato || 'Non assegnato';
