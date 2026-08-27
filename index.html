@@ -2,12 +2,12 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<title>Team Task Board</title>
+<title>Team Task Board DLY1</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    background: #0a1929;
-    color: #fff;
+    background: #f5f5f5;
+    color: #212121;
     font-family: 'Segoe UI', sans-serif;
     padding: 20px;
     min-height: 100vh;
@@ -20,16 +20,19 @@
     padding-bottom: 15px;
     margin-bottom: 25px;
   }
-  h1 { font-size: 2.5em; }
+  h1 { 
+    font-size: 2.5em; 
+    color: #212121;
+  }
   .datetime-container { text-align: right; }
   #clock { 
     font-size: 2em; 
-    color: #64b5f6; 
+    color: #1976d2; 
     font-weight: bold;
   }
   #date { 
     font-size: 1.1em; 
-    color: #90caf9; 
+    color: #546e7a; 
     margin-top: 4px;
   }
   #refreshBtn {
@@ -42,10 +45,12 @@
     cursor: pointer;
     font-size: 0.9em;
     transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   }
   #refreshBtn:hover {
     background: #1565c0;
     transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
   }
   #refreshBtn:active { transform: scale(0.95); }
   #refreshBtn.loading {
@@ -54,7 +59,7 @@
   }
   #lastUpdate {
     font-size: 0.75em;
-    color: #78909c;
+    color: #90a4ae;
     margin-top: 4px;
     font-style: italic;
   }
@@ -64,20 +69,21 @@
     gap: 20px;
   }
   .category {
-    background: #132f4c;
+    background: #ffffff;
     border-radius: 12px;
     padding: 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border: 1px solid #e0e0e0;
   }
   .category h2 {
-    color: #64b5f6;
+    color: #1976d2;
     margin-bottom: 15px;
-    border-bottom: 1px solid #1e4976;
+    border-bottom: 2px solid #e3f2fd;
     padding-bottom: 8px;
   }
   .task {
-    background: #1e3a5f;
-    border-left: 4px solid #64b5f6;
+    background: #fafafa;
+    border-left: 4px solid #90caf9;
     padding: 12px;
     margin-bottom: 10px;
     border-radius: 6px;
@@ -86,11 +92,17 @@
     align-items: center;
     gap: 10px;
     position: relative;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   }
-  .task:hover { background: #244b7a; transform: translateX(3px); }
+  .task:hover { 
+    background: #f0f4f8; 
+    transform: translateX(3px);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
   .task.done {
-    opacity: 0.5;
+    opacity: 0.55;
     text-decoration: line-through;
+    background: #e8f5e9;
     border-left-color: #4caf50 !important;
   }
   .task.livello-Alta { border-left-color: #f44336; }
@@ -98,32 +110,31 @@
   .task.livello-Bassa { border-left-color: #4caf50; }
 
   .task.scaduta {
-    background: linear-gradient(135deg, #4a0e0e 0%, #1e3a5f 100%);
+    background: linear-gradient(135deg, #ffebee 0%, #fafafa 100%);
     border-left-color: #d32f2f !important;
     animation: pulse-red 2s infinite;
   }
   .task.imminente {
-    background: linear-gradient(135deg, #4a3a0e 0%, #1e3a5f 100%);
+    background: linear-gradient(135deg, #fff8e1 0%, #fafafa 100%);
     border-left-color: #ffa726 !important;
   }
   .task.oggi {
-    background: linear-gradient(135deg, #4a2a0e 0%, #1e3a5f 100%);
+    background: linear-gradient(135deg, #ffe0b2 0%, #fafafa 100%);
     border-left-color: #ff5722 !important;
     animation: pulse-orange 3s infinite;
   }
 
   @keyframes pulse-red {
-    0%, 100% { box-shadow: 0 0 5px rgba(211, 47, 47, 0.5); }
-    50% { box-shadow: 0 0 20px rgba(211, 47, 47, 0.9); }
+    0%, 100% { box-shadow: 0 0 5px rgba(211, 47, 47, 0.3); }
+    50% { box-shadow: 0 0 20px rgba(211, 47, 47, 0.6); }
   }
   @keyframes pulse-orange {
-    0%, 100% { box-shadow: 0 0 5px rgba(255, 87, 34, 0.4); }
-    50% { box-shadow: 0 0 15px rgba(255, 87, 34, 0.7); }
+    0%, 100% { box-shadow: 0 0 5px rgba(255, 87, 34, 0.3); }
+    50% { box-shadow: 0 0 15px rgba(255, 87, 34, 0.5); }
   }
 
-  /* Highlight quando la task cambia stato da sheet */
   @keyframes flash-update {
-    0% { background: #4caf50; }
+    0% { background: #c8e6c9; }
     100% { background: inherit; }
   }
   .task.just-updated {
@@ -131,9 +142,12 @@
   }
 
   .task-info { flex: 1; }
+  .task-info strong {
+    color: #212121;
+  }
   .task-meta { 
     font-size: 0.85em; 
-    color: #90caf9; 
+    color: #607d8b; 
     margin-top: 4px;
     display: flex;
     gap: 10px;
@@ -148,15 +162,46 @@
     font-weight: bold;
     margin-left: 4px;
   }
-  .due-badge.normale { background: #37474f; color: #b0bec5; }
-  .due-badge.imminente { background: #ffa726; color: #000; }
-  .due-badge.oggi { background: #ff5722; color: #fff; }
-  .due-badge.scaduta { background: #d32f2f; color: #fff; }
+  .due-badge.normale { 
+    background: #eceff1; 
+    color: #546e7a; 
+  }
+  .due-badge.imminente { 
+    background: #ffa726; 
+    color: #000; 
+  }
+  .due-badge.oggi { 
+    background: #ff5722; 
+    color: #fff; 
+  }
+  .due-badge.scaduta { 
+    background: #d32f2f; 
+    color: #fff; 
+  }
 
-  .checkbox { width: 22px; height: 22px; cursor: pointer; }
+  .checkbox { 
+    width: 22px; 
+    height: 22px; 
+    cursor: pointer;
+    accent-color: #1976d2;
+  }
   .checkbox:disabled { cursor: wait; opacity: 0.5; }
-  #status { color: #f44336; margin: 20px 0; }
-  .loading { text-align: center; padding: 40px; color: #64b5f6; }
+  #status { 
+    color: #d32f2f; 
+    margin: 20px 0;
+    padding: 10px;
+    background: #ffebee;
+    border-radius: 6px;
+  }
+  #status:empty { 
+    display: none; 
+  }
+  .loading { 
+    text-align: center; 
+    padding: 40px; 
+    color: #1976d2; 
+    font-size: 1.2em;
+  }
   .saving-indicator {
     display: inline-block;
     margin-left: 8px;
@@ -172,24 +217,43 @@
     flex-wrap: wrap;
   }
   .summary-card {
-    background: #132f4c;
+    background: #ffffff;
     padding: 10px 20px;
     border-radius: 8px;
     display: flex;
     align-items: center;
     gap: 10px;
     font-size: 0.95em;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    border: 1px solid #e0e0e0;
+    color: #212121;
   }
-  .summary-card.critical { border-left: 4px solid #d32f2f; }
-  .summary-card.warning { border-left: 4px solid #ffa726; }
-  .summary-card.info { border-left: 4px solid #64b5f6; }
-  .summary-count { font-size: 1.5em; font-weight: bold; }
+  .summary-card.critical { 
+    border-left: 4px solid #d32f2f; 
+  }
+  .summary-card.warning { 
+    border-left: 4px solid #ffa726; 
+  }
+  .summary-card.info { 
+    border-left: 4px solid #1976d2; 
+  }
+  .summary-count { 
+    font-size: 1.5em; 
+    font-weight: bold; 
+    color: #1976d2;
+  }
+  .summary-card.critical .summary-count {
+    color: #d32f2f;
+  }
+  .summary-card.warning .summary-count {
+    color: #ff9800;
+  }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>📋 Team Task Board</h1>
+  <h1>📋 Team Task Board DLY1</h1>
   <div class="datetime-container">
     <div id="clock">--:--:--</div>
     <div id="date">-- ------ ----</div>
@@ -207,12 +271,12 @@
 <script>
   const API_URL = 'https://script.google.com/macros/s/AKfycbzWplByZ9asXeAMKzQyak1IG3kIaGQ5ukxbFwOeUwBIZWaz9hZA0LMEB-8NPCRnlSnzZg/exec';
 
-  const AUTO_REFRESH_MS = 15000; // ⚡ 15 secondi per aggiornamenti più reattivi
+  const AUTO_REFRESH_MS = 15000;
   const GIORNI_IMMINENTE = 3;
   const GIORNI_OGGI = 1;
 
   let isUpdating = false;
-  let lastTaskStates = {}; // Traccia stato precedente per animazioni
+  let lastTaskStates = {};
 
   function updateDateTime() {
     const now = new Date();
@@ -239,7 +303,6 @@
     if (!dataString) return '';
     const data = new Date(dataString);
     if (isNaN(data.getTime())) return '';
-
     const giorno = String(data.getDate()).padStart(2, '0');
     const mese = String(data.getMonth() + 1).padStart(2, '0');
     return `${giorno}-${mese}`;
@@ -249,11 +312,9 @@
     if (!scadenza) return null;
     const dataScadenza = new Date(scadenza);
     if (isNaN(dataScadenza.getTime())) return null;
-
     const oggi = new Date();
     oggi.setHours(0, 0, 0, 0);
     dataScadenza.setHours(0, 0, 0, 0);
-
     const diffMs = dataScadenza - oggi;
     return Math.round(diffMs / (1000 * 60 * 60 * 24));
   }
@@ -274,7 +335,6 @@
     if (isDone) {
       return `<span class="due-badge normale">📅 ${dataFormattata}</span>`;
     }
-
     if (giorniMancanti === null) return '';
 
     let classe = 'normale';
@@ -333,36 +393,27 @@
     const btn = document.getElementById('refreshBtn');
     btn.classList.add('loading');
     btn.textContent = '⏳ Aggiorno...';
-
     await loadTasks();
-
     btn.classList.remove('loading');
     btn.textContent = '🔄 Aggiorna';
   }
 
-  // 🔔 Rileva task che sono cambiate dall'ultimo refresh
   function detectChanges(tasks) {
     const newStates = {};
-    const changedTasks = [];
+    const changedIds = [];
 
     tasks.forEach(t => {
       const currentDone = isTaskDone(t);
       newStates[t.ID] = currentDone;
 
       if (lastTaskStates.hasOwnProperty(t.ID) && lastTaskStates[t.ID] !== currentDone) {
-        changedTasks.push({ id: t.ID, task: t.Task, done: currentDone });
+        changedIds.push(t.ID);
+        console.log(`🔄 Task cambiata dal Sheet: "${t.Task}" → ${currentDone ? '✅' : '⬜'}`);
       }
     });
 
-    // Log delle modifiche esterne
-    if (changedTasks.length > 0) {
-      changedTasks.forEach(c => {
-        console.log(`🔄 Task cambiata dal Sheet: "${c.task}" → ${c.done ? '✅ completata' : '⬜ da fare'}`);
-      });
-    }
-
+    window.recentlyChanged = changedIds;
     lastTaskStates = newStates;
-    return changedTasks.map(c => c.id);
   }
 
   function updateSummary(tasks) {
@@ -371,11 +422,9 @@
 
     tasks.forEach(t => {
       if (isTaskDone(t)) { completate++; return; }
-
       totali++;
       const giorni = calcolaGiorniMancanti(t.Scadenza);
       if (giorni === null) return;
-
       if (giorni < 0) scadute++;
       else if (giorni <= GIORNI_OGGI) oggi++;
       else if (giorni <= GIORNI_IMMINENTE) imminenti++;
@@ -447,6 +496,12 @@
           const taskEl = document.createElement('div');
           taskEl.className = `task livello-${livello} ${isDone ? 'done' : ''} ${scadenzaClass}`;
           taskEl.dataset.taskId = t.ID;
+
+          if (window.recentlyChanged && window.recentlyChanged.includes(t.ID)) {
+            taskEl.classList.add('just-updated');
+            setTimeout(() => taskEl.classList.remove('just-updated'), 1500);
+          }
+
           taskEl.innerHTML = `
             <input type="checkbox" class="checkbox" ${isDone ? 'checked' : ''} 
                    onchange="toggleTask(${t.ID}, this.checked, this)">
