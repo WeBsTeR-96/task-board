@@ -148,7 +148,13 @@
       categorie[cat]
         .sort((a, b) => (ordineL[a.Livello] || 9) - (ordineL[b.Livello] || 9))
         .forEach(t => {
-          const isDone = t.Stato === true || t.Stato === 'TRUE' || t.Stato === 'Completato';
+          const isDone = t.Stato === true 
+            || t.Stato === 'TRUE' 
+            || t.Stato === 'VERO'          // Google Sheets italiano
+            || t.Stato === 'Completato'
+            || t.Stato === 1
+            || String(t.Stato).toLowerCase() === 'true'
+            || String(t.Stato).toLowerCase() === 'vero';
           const livello = t.Livello || 'Media';
           const taskText = t.Task || 'Senza descrizione';
           const assegnato = t.Assegnato || 'Non assegnato';
