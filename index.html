@@ -107,7 +107,7 @@
     }
   }
 
-  function renderBoard(tasks) {
+ function renderBoard(tasks) {
     document.getElementById('status').textContent = '';
     const board = document.getElementById('board');
     board.innerHTML = '';
@@ -115,8 +115,9 @@
     // Raggruppa per categoria
     const categorie = {};
     tasks.forEach(t => {
-      if (!categorie[t.Categoria]) categorie[t.Categoria] = [];
-      categorie[t.Categoria].push(t);
+      const cat = t.Categoria || 'Altro';
+      if (!categorie[cat]) categorie[cat] = [];
+      categorie[cat].push(t);
     });
 
     // Ordina task per livello (Alta > Media > Bassa)
@@ -130,17 +131,17 @@
       categorie[cat]
         .sort((a, b) => (ordineL[a.Livello] || 9) - (ordineL[b.Livello] || 9))
         .forEach(t => {
-          const isDone = t.Completato === true || t.Completato === 'TRUE';
+          const isDone = t.Stato === true || t.Stato === 'TRUE' || t.Stato === 'Completato';
+          const livello = t.Livello || 'Media';
           const taskEl = document.createElement('div');
-          taskEl.className = `task livello-${t.Livello} ${isDone ? 'done' : ''}`;
+          taskEl.className = `task livello-${livello} ${isDone ? 'done' : ''}`;
           taskEl.innerHTML = `
             <input type="checkbox" class="checkbox" ${isDone ? 'checked' : ''} 
                    onchange="toggleTask(${t.ID}, this.checked)">
             <div class="task-info">
-              <div><strong>${t.Task}</strong></div>
-              <div class="task-meta">👤 ${t.Assegnato || 'N/A'} | 
-                   🎯 ${t.Livello || 'N/A'} | 
-                   📅 ${t.Data || 'N/A'}</div>
+              <div><strong>${t.Task || 'Senza descrizione'}</strong></div>
+              <div class="task-meta">👤 ${t.Assegnato || 'Non assegnato'} | 
+                   🎯 ${livello}</div>
             </div>
           `;
           div.appendChild(taskEl);
