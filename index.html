@@ -21,7 +21,17 @@
     margin-bottom: 25px;
   }
   h1 { font-size: 2.5em; }
-  #clock { font-size: 2em; color: #64b5f6; }
+  .datetime-container { text-align: right; }
+  #clock { 
+    font-size: 2em; 
+    color: #64b5f6; 
+    font-weight: bold;
+  }
+  #date { 
+    font-size: 1.1em; 
+    color: #90caf9; 
+    margin-top: 4px;
+  }
   .board {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -49,6 +59,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    position: relative;
   }
   .task:hover { background: #244b7a; transform: translateX(3px); }
   .task.done {
@@ -59,13 +70,55 @@
   .task.livello-Alta { border-left-color: #f44336; }
   .task.livello-Media { border-left-color: #ff9800; }
   .task.livello-Bassa { border-left-color: #4caf50; }
-  .task-info { flex: 1; }
-  .task-meta { font-size: 0.85em; color: #90caf9; margin-top: 4px; }
-  .checkbox {
-    width: 22px;
-    height: 22px;
-    cursor: pointer;
+
+  .task.scaduta {
+    background: linear-gradient(135deg, #4a0e0e 0%, #1e3a5f 100%);
+    border-left-color: #d32f2f !important;
+    animation: pulse-red 2s infinite;
   }
+  .task.imminente {
+    background: linear-gradient(135deg, #4a3a0e 0%, #1e3a5f 100%);
+    border-left-color: #ffa726 !important;
+  }
+  .task.oggi {
+    background: linear-gradient(135deg, #4a2a0e 0%, #1e3a5f 100%);
+    border-left-color: #ff5722 !important;
+    animation: pulse-orange 3s infinite;
+  }
+
+  @keyframes pulse-red {
+    0%, 100% { box-shadow: 0 0 5px rgba(211, 47, 47, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(211, 47, 47, 0.9); }
+  }
+  @keyframes pulse-orange {
+    0%, 100% { box-shadow: 0 0 5px rgba(255, 87, 34, 0.4); }
+    50% { box-shadow: 0 0 15px rgba(255, 87, 34, 0.7); }
+  }
+
+  .task-info { flex: 1; }
+  .task-meta { 
+    font-size: 0.85em; 
+    color: #90caf9; 
+    margin-top: 4px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .due-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: bold;
+    margin-left: 4px;
+  }
+  .due-badge.normale { background: #37474f; color: #b0bec5; }
+  .due-badge.imminente { background: #ffa726; color: #000; }
+  .due-badge.oggi { background: #ff5722; color: #fff; }
+  .due-badge.scaduta { background: #d32f2f; color: #fff; }
+
+  .checkbox { width: 22px; height: 22px; cursor: pointer; }
   .checkbox:disabled { cursor: wait; opacity: 0.5; }
   #status { color: #f44336; margin: 20px 0; }
   .loading { text-align: center; padding: 40px; color: #64b5f6; }
@@ -76,36 +129,137 @@
     font-size: 0.75em;
     font-style: italic;
   }
+
+  .summary {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .summary-card {
+    background: #132f4c;
+    padding: 10px 20px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95em;
+  }
+  .summary-card.critical { border-left: 4px solid #d32f2f; }
+  .summary-card.warning { border-left: 4px solid #ffa726; }
+  .summary-card.info { border-left: 4px solid #64b5f6; }
+  .summary-count { font-size: 1.5em; font-weight: bold; }
 </style>
 </head>
 <body>
 
 <header>
   <h1>📋 Team Task Board</h1>
-  <div id="clock">--:--:--</div>
+  <div class="datetime-container">
+    <div id="clock">--:--:--</div>
+    <div id="date">-- ------ ----</div>
+  </div>
 </header>
 
+<div id="summary" class="summary"></div>
 <div id="status"></div>
 <div id="board" class="board">
   <div class="loading">⏳ Caricamento tasks...</div>
 </div>
 
 <script>
-  // 🔴 IL TUO URL Apps Script
   const API_URL = 'https://script.google.com/macros/s/AKfycbzWplByZ9asXeAMKzQyak1IG3kIaGQ5ukxbFwOeUwBIZWaz9hZA0LMEB-8NPCRnlSnzZg/exec';
 
-  const AUTO_REFRESH_MS = 30000; // 30 secondi
-  let isUpdating = false; // Blocca refresh durante update
+  const AUTO_REFRESH_MS = 30000;
+  const GIORNI_IMMINENTE = 3;
+  const GIORNI_OGGI = 1;
 
-  function updateClock() {
+  let isUpdating = false;
+
+  function updateDateTime() {
+    const now = new Date();
     document.getElementById('clock').textContent = 
-      new Date().toLocaleTimeString('it-IT');
+      now.toLocaleTimeString('it-IT');
+    document.getElementById('date').textContent = 
+      now.toLocaleDateString('it-IT', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      });
   }
-  setInterval(updateClock, 1000);
-  updateClock();
+  setInterval(updateDateTime, 1000);
+  updateDateTime();
+
+  // 📅 Formatta data in DD-MM
+  function formatDataDDMM(dataString) {
+    if (!dataString) return '';
+    const data = new Date(dataString);
+    if (isNaN(data.getTime())) return '';
+
+    const giorno = String(data.getDate()).padStart(2, '0');
+    const mese = String(data.getMonth() + 1).padStart(2, '0');
+    return `${giorno}-${mese}`;
+  }
+
+  function calcolaGiorniMancanti(scadenza) {
+    if (!scadenza) return null;
+
+    const dataScadenza = new Date(scadenza);
+    if (isNaN(dataScadenza.getTime())) return null;
+
+    const oggi = new Date();
+    oggi.setHours(0, 0, 0, 0);
+    dataScadenza.setHours(0, 0, 0, 0);
+
+    const diffMs = dataScadenza - oggi;
+    return Math.round(diffMs / (1000 * 60 * 60 * 24));
+  }
+
+  function getScadenzaClass(giorniMancanti, isDone) {
+    if (isDone || giorniMancanti === null) return '';
+    if (giorniMancanti < 0) return 'scaduta';
+    if (giorniMancanti <= GIORNI_OGGI) return 'oggi';
+    if (giorniMancanti <= GIORNI_IMMINENTE) return 'imminente';
+    return '';
+  }
+
+  function getScadenzaBadge(giorniMancanti, scadenza, isDone) {
+    if (!scadenza) return '';
+
+    const dataFormattata = formatDataDDMM(scadenza);
+    if (!dataFormattata) return '';
+
+    if (isDone) {
+      return `<span class="due-badge normale">📅 ${dataFormattata}</span>`;
+    }
+
+    if (giorniMancanti === null) return '';
+
+    let classe = 'normale';
+    let testo = `📅 ${dataFormattata}`;
+
+    if (giorniMancanti < 0) {
+      classe = 'scaduta';
+      testo = `🚨 SCADUTA (${Math.abs(giorniMancanti)}g fa) - ${dataFormattata}`;
+    } else if (giorniMancanti === 0) {
+      classe = 'oggi';
+      testo = `⏰ OGGI - ${dataFormattata}`;
+    } else if (giorniMancanti === 1) {
+      classe = 'oggi';
+      testo = `⏰ DOMANI - ${dataFormattata}`;
+    } else if (giorniMancanti <= GIORNI_IMMINENTE) {
+      classe = 'imminente';
+      testo = `⚠️ ${giorniMancanti}g - ${dataFormattata}`;
+    } else {
+      testo = `📅 ${dataFormattata} (${giorniMancanti}g)`;
+    }
+
+    return `<span class="due-badge ${classe}">${testo}</span>`;
+  }
 
   async function loadTasks() {
-    if (isUpdating) return; // Non aggiornare durante una modifica
+    if (isUpdating) return;
 
     try {
       const res = await fetch(API_URL);
@@ -113,12 +267,58 @@
       if (json.status === 'ok') {
         console.log('✅ Dati ricevuti:', json.data);
         renderBoard(json.data);
+        updateSummary(json.data);
       } else {
         showError('Errore: ' + json.message);
       }
     } catch (err) {
       showError('Errore caricamento: ' + err.message);
     }
+  }
+
+  function updateSummary(tasks) {
+    const summary = document.getElementById('summary');
+
+    let scadute = 0, imminenti = 0, oggi = 0, completate = 0, totali = 0;
+
+    tasks.forEach(t => {
+      const isDone = t.Stato === true || t.Stato === 'TRUE' || 
+                     t.Stato === 'VERO' || t.Stato === 1;
+      if (isDone) { completate++; return; }
+
+      totali++;
+      const giorni = calcolaGiorniMancanti(t.Scadenza);
+      if (giorni === null) return;
+
+      if (giorni < 0) scadute++;
+      else if (giorni <= GIORNI_OGGI) oggi++;
+      else if (giorni <= GIORNI_IMMINENTE) imminenti++;
+    });
+
+    let html = '';
+    if (scadute > 0) {
+      html += `<div class="summary-card critical">
+        🚨 <span class="summary-count">${scadute}</span> Scadute
+      </div>`;
+    }
+    if (oggi > 0) {
+      html += `<div class="summary-card critical">
+        ⏰ <span class="summary-count">${oggi}</span> Oggi/Domani
+      </div>`;
+    }
+    if (imminenti > 0) {
+      html += `<div class="summary-card warning">
+        ⚠️ <span class="summary-count">${imminenti}</span> Imminenti (${GIORNI_IMMINENTE}g)
+      </div>`;
+    }
+    html += `<div class="summary-card info">
+      ✅ <span class="summary-count">${completate}</span> Completate
+    </div>`;
+    html += `<div class="summary-card info">
+      📋 <span class="summary-count">${totali}</span> Aperte
+    </div>`;
+
+    summary.innerHTML = html;
   }
 
   function renderBoard(tasks) {
@@ -146,28 +346,54 @@
       div.innerHTML = `<h2>${cat}</h2>`;
 
       categorie[cat]
-        .sort((a, b) => (ordineL[a.Livello] || 9) - (ordineL[b.Livello] || 9))
+        .sort((a, b) => {
+          const giorniA = calcolaGiorniMancanti(a.Scadenza);
+          const giorniB = calcolaGiorniMancanti(b.Scadenza);
+
+          const isDoneA = a.Stato === true || a.Stato === 'TRUE' || a.Stato === 'VERO';
+          const isDoneB = b.Stato === true || b.Stato === 'TRUE' || b.Stato === 'VERO';
+
+          if (isDoneA !== isDoneB) return isDoneA ? 1 : -1;
+
+          if (giorniA === null && giorniB !== null) return 1;
+          if (giorniA !== null && giorniB === null) return -1;
+
+          if (giorniA !== null && giorniB !== null) {
+            return giorniA - giorniB;
+          }
+
+          return (ordineL[a.Livello] || 9) - (ordineL[b.Livello] || 9);
+        })
         .forEach(t => {
           const isDone = t.Stato === true 
-            || t.Stato === 'TRUE' 
-            || t.Stato === 'VERO'          // Google Sheets italiano
-            || t.Stato === 'Completato'
-            || t.Stato === 1
-            || String(t.Stato).toLowerCase() === 'true'
-            || String(t.Stato).toLowerCase() === 'vero';
+                      || t.Stato === 'TRUE' 
+                      || t.Stato === 'VERO'
+                      || t.Stato === 'Completato'
+                      || t.Stato === 1
+                      || String(t.Stato).toLowerCase() === 'true'
+                      || String(t.Stato).toLowerCase() === 'vero';
+
           const livello = t.Livello || 'Media';
           const taskText = t.Task || 'Senza descrizione';
           const assegnato = t.Assegnato || 'Non assegnato';
 
+          const giorniMancanti = calcolaGiorniMancanti(t.Scadenza);
+          const scadenzaClass = getScadenzaClass(giorniMancanti, isDone);
+          const scadenzaBadge = getScadenzaBadge(giorniMancanti, t.Scadenza, isDone);
+
           const taskEl = document.createElement('div');
-          taskEl.className = `task livello-${livello} ${isDone ? 'done' : ''}`;
+          taskEl.className = `task livello-${livello} ${isDone ? 'done' : ''} ${scadenzaClass}`;
           taskEl.dataset.taskId = t.ID;
           taskEl.innerHTML = `
             <input type="checkbox" class="checkbox" ${isDone ? 'checked' : ''} 
                    onchange="toggleTask(${t.ID}, this.checked, this)">
             <div class="task-info">
               <div><strong>${taskText}</strong><span class="saving-indicator" style="display:none">💾 Salvataggio...</span></div>
-              <div class="task-meta">👤 ${assegnato} | 🎯 ${livello}</div>
+              <div class="task-meta">
+                <span>👤 ${assegnato}</span>
+                <span>🎯 ${livello}</span>
+                ${scadenzaBadge}
+              </div>
             </div>
           `;
           div.appendChild(taskEl);
@@ -177,40 +403,34 @@
   }
 
   async function toggleTask(id, completed, checkbox) {
-    isUpdating = true; // Blocca auto-refresh
+    isUpdating = true;
     checkbox.disabled = true;
 
-    // Mostra indicatore di salvataggio
     const savingIndicator = checkbox.parentElement.querySelector('.saving-indicator');
     if (savingIndicator) savingIndicator.style.display = 'inline';
 
     try {
-      // ⚠️ IMPORTANTE: Usiamo text/plain per aggirare CORS preflight di Apps Script
       const response = await fetch(API_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8',
-        },
-        body: JSON.stringify({ 
-          id: id, 
-          completed: completed 
-        })
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ id: id, completed: completed })
       });
 
       const result = await response.json();
       console.log('✅ Risposta update:', result);
 
       if (result.status === 'ok') {
-        // Aggiorna visualmente la task
         const taskEl = checkbox.closest('.task');
         if (completed) {
           taskEl.classList.add('done');
+          taskEl.classList.remove('scaduta', 'imminente', 'oggi');
         } else {
           taskEl.classList.remove('done');
         }
+        setTimeout(loadTasks, 1000);
       } else {
         showError('Errore aggiornamento: ' + result.message);
-        checkbox.checked = !completed; // Ripristina stato
+        checkbox.checked = !completed;
       }
     } catch (err) {
       console.error('❌ Errore:', err);
