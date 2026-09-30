@@ -56,12 +56,6 @@
     color: #fff;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
   }
-  .week-label {
-    font-size: 1em;
-    color: #e3f2fd;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-  }
   .week-range {
     font-size: 1em;
     color: #e3f2fd;
@@ -87,6 +81,8 @@
     border-bottom: 1px solid #1e4976;
     padding-bottom: 8px;
   }
+
+  /* 📋 Task base - bordo neutro blu */
   .task {
     background: #1e3a5f;
     border-left: 4px solid #64b5f6;
@@ -100,15 +96,15 @@
     position: relative;
   }
   .task:hover { background: #244b7a; transform: translateX(3px); }
+
+  /* ✅ Task completata */
   .task.done {
     opacity: 0.5;
     text-decoration: line-through;
     border-left-color: #4caf50 !important;
   }
-  .task.livello-Alta { border-left-color: #f44336; }
-  .task.livello-Media { border-left-color: #ff9800; }
-  .task.livello-Bassa { border-left-color: #4caf50; }
 
+  /* 🚨 Alert scadenza (mantiene priorità sul bordo) */
   .task.scaduta {
     background: linear-gradient(135deg, #4a0e0e 0%, #1e3a5f 100%);
     border-left-color: #d32f2f !important;
@@ -141,8 +137,10 @@
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
+    align-items: center;
   }
 
+  /* 📅 Badge scadenza */
   .due-badge {
     display: inline-block;
     padding: 2px 8px;
@@ -155,6 +153,23 @@
   .due-badge.imminente { background: #ffa726; color: #000; }
   .due-badge.oggi { background: #ff5722; color: #fff; }
   .due-badge.scaduta { background: #d32f2f; color: #fff; }
+
+  /* 🔄 Badge Cadenza */
+  .cadenza-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: bold;
+    background: #5c6bc0;
+    color: #fff;
+  }
+  .cadenza-badge.weekly { background: #26a69a; }
+  .cadenza-badge.monthly { background: #7e57c2; }
+  .cadenza-badge.biweekly { background: #ec407a; }
+  .cadenza-badge.daily { background: #ef5350; }
+  .cadenza-badge.quarterly { background: #66bb6a; }
+  .cadenza-badge.yearly { background: #ff7043; }
 
   .checkbox { width: 22px; height: 22px; cursor: pointer; }
   .checkbox:disabled { cursor: wait; opacity: 0.5; }
@@ -221,13 +236,12 @@
   const GIORNI_OGGI = 1;
 
   // 📅 CALIBRAZIONE WEEK NUMBER
-  // Data di riferimento: domenica 27 settembre 2026 = WK 40
-  const WEEK_REFERENCE_DATE = new Date(2026, 8, 27); // Mese 8 = settembre (0-indexed)
+  const WEEK_REFERENCE_DATE = new Date(2026, 8, 27);
   const WEEK_REFERENCE_NUMBER = 40;
 
   let isUpdating = false;
 
-  // 📅 Calcola numero settimana usando data di riferimento
+  // 📅 Calcola numero settimana
   function getWeekNumber(date) {
     const target = new Date(date.valueOf());
     target.setHours(0, 0, 0, 0);
@@ -235,34 +249,25 @@
     const reference = new Date(WEEK_REFERENCE_DATE.valueOf());
     reference.setHours(0, 0, 0, 0);
 
-    // Calcola quanti giorni sono passati dalla data di riferimento
     const diffMs = target - reference;
     const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
-    // Trova la domenica della settimana della data corrente
-    const dayOfWeek = target.getDay(); // 0=domenica, 6=sabato
-
-    // Aggiusta i giorni per trovare la domenica della settimana corrente
+    const dayOfWeek = target.getDay();
     const daysToSundayOfTarget = diffDays - dayOfWeek;
-
-    // Numero di settimane rispetto al riferimento
     const weeksDiff = Math.floor(daysToSundayOfTarget / 7);
 
     return WEEK_REFERENCE_NUMBER + weeksDiff;
   }
 
-  // 📅 Calcola inizio e fine settimana corrente (domenica → sabato)
   function getWeekRange(date) {
     const current = new Date(date.valueOf());
     current.setHours(0, 0, 0, 0);
 
     const dayOfWeek = current.getDay();
 
-    // Trova la domenica di questa settimana
     const sunday = new Date(current);
     sunday.setDate(current.getDate() - dayOfWeek);
 
-    // Trova il sabato di questa settimana
     const saturday = new Date(sunday);
     saturday.setDate(sunday.getDate() + 6);
 
@@ -278,11 +283,9 @@
   function updateDateTime() {
     const now = new Date();
 
-    // Aggiorna orologio
     document.getElementById('clock').textContent = 
       now.toLocaleTimeString('it-IT');
 
-    // Aggiorna data completa
     document.getElementById('date').textContent = 
       now.toLocaleDateString('it-IT', { 
         weekday: 'long', 
@@ -291,7 +294,6 @@
         year: 'numeric' 
       });
 
-    // Aggiorna Week Number
     const weekNum = getWeekNumber(now);
     const weekRange = getWeekRange(now);
     document.getElementById('weekNumber').textContent = 'WK ' + weekNum;
@@ -300,7 +302,20 @@
   setInterval(updateDateTime, 1000);
   updateDateTime();
 
-  // 📅 Formatta data in DD-MM
+  // 🔄 Normalizza valore cadenza per la classe CSS
+  function getCadenzaClass(cadenza) {
+    if (!cadenza) return '';
+    const normalized = String(cadenza).toLowerCase().trim();
+
+    if (normalized === 'weekly') return 'weekly';
+    if (normalized === 'monthly') return 'monthly';
+    if (normalized === 'bi-weekly' || normalized === 'biweekly') return 'biweekly';
+    if (normalized === 'daily') return 'daily';
+    if (normalized === 'quarterly') return 'quarterly';
+    if (normalized === 'yearly' || normalized === 'annual') return 'yearly';
+    return ''; // Default blu per valori custom
+  }
+
   function formatDataDDMM(dataString) {
     if (!dataString) return '';
     const data = new Date(dataString);
@@ -447,8 +462,6 @@
       categorie[cat].push(t);
     });
 
-    const ordineL = { 'Alta': 1, 'Media': 2, 'Bassa': 3 };
-
     Object.keys(categorie).sort().forEach(cat => {
       const div = document.createElement('div');
       div.className = 'category';
@@ -462,16 +475,19 @@
           const isDoneA = a.Stato === true || a.Stato === 'TRUE' || a.Stato === 'VERO';
           const isDoneB = b.Stato === true || b.Stato === 'TRUE' || b.Stato === 'VERO';
 
+          // Completate in fondo
           if (isDoneA !== isDoneB) return isDoneA ? 1 : -1;
 
+          // Task con data prima di quelle senza
           if (giorniA === null && giorniB !== null) return 1;
           if (giorniA !== null && giorniB === null) return -1;
 
+          // Ordina per giorni mancanti
           if (giorniA !== null && giorniB !== null) {
             return giorniA - giorniB;
           }
 
-          return (ordineL[a.Livello] || 9) - (ordineL[b.Livello] || 9);
+          return 0;
         })
         .forEach(t => {
           const isDone = t.Stato === true 
@@ -482,7 +498,10 @@
                       || String(t.Stato).toLowerCase() === 'true'
                       || String(t.Stato).toLowerCase() === 'vero';
 
-          const livello = t.Livello || 'Media';
+          // 🔄 Retrocompatibilità: legge Cadenza, altrimenti Livello
+          const cadenza = t.Cadenza || t.Livello || '';
+          const cadenzaClass = getCadenzaClass(cadenza);
+
           const taskText = t.Task || 'Senza descrizione';
           const assegnato = t.Assegnato || 'Non assegnato';
 
@@ -491,7 +510,7 @@
           const scadenzaBadge = getScadenzaBadge(giorniMancanti, t.Scadenza, isDone);
 
           const taskEl = document.createElement('div');
-          taskEl.className = `task livello-${livello} ${isDone ? 'done' : ''} ${scadenzaClass}`;
+          taskEl.className = `task ${isDone ? 'done' : ''} ${scadenzaClass}`;
           taskEl.dataset.taskId = t.ID;
           taskEl.innerHTML = `
             <input type="checkbox" class="checkbox" ${isDone ? 'checked' : ''} 
@@ -500,7 +519,7 @@
               <div><strong>${taskText}</strong><span class="saving-indicator" style="display:none">💾 Salvataggio...</span></div>
               <div class="task-meta">
                 <span>👤 ${assegnato}</span>
-                <span>🎯 ${livello}</span>
+                ${cadenza ? `<span class="cadenza-badge ${cadenzaClass}">🔄 ${cadenza}</span>` : ''}
                 ${scadenzaBadge}
               </div>
             </div>
