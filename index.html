@@ -734,33 +734,53 @@
     alerts.innerHTML = html;
   }
 
-  // 🔴 Aggiorna banda "Dive Deep WK precedente"
+ // 🔴 Aggiorna banda "Dive Deep WK precedente"
+  // 📊 Nuova logica: legge da StoricoScadute (campo auto-popolato da Apps Script)
   function updateDiveDeep(tasks) {
     const bar = document.getElementById('diveDeepBar');
     const title = document.getElementById('diveDeepTitle');
     const tasksContainer = document.getElementById('diveDeepTasks');
 
-    const prevWeek = getPreviousWeekBounds(new Date());
+    const now = new Date();
+    const currentWK = getWeekNumber(now);
+    const previousWK = currentWK - 1;
 
-    // Filtra task: scadenza nella WK precedente AND non completate
+    // Filtra task: StoricoScadute contiene WK precedente AND non completate
     const scaduteWKPrecedente = tasks.filter(t => {
       const isDone = t.Stato === true || t.Stato === 'TRUE' || 
                      t.Stato === 'VERO' || t.Stato === 1;
       if (isDone) return false;
 
-      if (!t.Scadenza) return false;
-      const dataScad = new Date(t.Scadenza);
-      if (isNaN(dataScad.getTime())) return false;
-      dataScad.setHours(12, 0, 0, 0); // Normalizza mezzogiorno per confronto
+      // Legge StoricoScadute (nuovo campo)
+      const storico = String(t.StoricoScadute || '').trim();
+      if (!storico) return false;
 
-      return dataScad >= prevWeek.start && dataScad <= prevWeek.end;
+      // Parse: "40, 39, 38" → [40, 39, 38]
+      const wks = storico
+        .split(',')
+        .map(s => parseInt(s.trim()))
+        .filter(n => !isNaN(n));
+
+      // Mostra se WK precedente è nello storico
+      return wks.includes(previousWK);
     });
 
     if (scaduteWKPrecedente.length === 0) {
-      // Nessuna task scaduta WK precedente → nascondi banda
       bar.classList.remove('visible');
       return;
     }
+
+    bar.classList.add('visible');
+    title.textContent = `⚠️ Dive Deep WK ${previousWK} - ${scaduteWKPrecedente.length} ${scaduteWKPrecedente.length === 1 ? 'task non completata' : 'task non completate'}:`;
+
+    const tasksHTML = scaduteWKPrecedente.map(t => {
+      const taskName = t.Task || 'Senza nome';
+      const owner = t.Assegnato || 'N/A';
+      return `<span class="dive-deep-task-item">${taskName}<span class="owner">(${owner})</span></span>`;
+    }).join(' ');
+
+    tasksContainer.innerHTML = tasksHTML;
+  }
 
     // Mostra banda con task scadute
     bar.classList.add('visible');
