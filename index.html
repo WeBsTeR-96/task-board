@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>Team Task Board</title>
 <style>
-  /* 🎨 VARIABILI TEMA - Dark (default) */
   :root {
     --bg-body: #0a1929;
     --bg-header-border: #1976d2;
@@ -25,7 +24,6 @@
     --dive-deep-text: #fff;
   }
 
-  /* ☀️ VARIABILI TEMA - Light */
   body.light-mode {
     --bg-body: #f5f7fa;
     --bg-header-border: #1976d2;
@@ -103,7 +101,6 @@
     margin-top: 4px;
   }
 
-  /* 📅 Week Bar - LAYOUT A 3 SEZIONI */
   .week-bar {
     background: linear-gradient(90deg, #1976d2 0%, #64b5f6 100%);
     color: white;
@@ -141,7 +138,6 @@
     font-weight: 600;
   }
 
-  /* 📊 Mini-cards nella Week Bar */
   .week-bar-stats {
     display: flex;
     gap: 12px;
@@ -176,7 +172,6 @@
     letter-spacing: 0.5px;
   }
 
-  /* 🔴 Banda Dive Deep - Scadute WK Precedente */
   .dive-deep-bar {
     background: var(--dive-deep-bg);
     color: var(--dive-deep-text);
@@ -185,7 +180,7 @@
     margin-bottom: 20px;
     box-shadow: 0 4px 12px rgba(211, 47, 47, 0.4);
     animation: dive-deep-pulse 3s infinite;
-    display: none; /* Nascosta di default */
+    display: none;
   }
   .dive-deep-bar.visible {
     display: block;
@@ -355,7 +350,6 @@
     font-style: italic;
   }
 
-  /* Alert cards (solo scadute/oggi/imminenti) */
   .alerts {
     display: flex;
     gap: 15px;
@@ -390,7 +384,6 @@
     z-index: 100;
   }
 
-  /* Responsive */
   @media (max-width: 900px) {
     .week-bar {
       grid-template-columns: 1fr;
@@ -415,7 +408,6 @@
   </div>
 </header>
 
-<!-- 📅 Week Bar con stats integrate -->
 <div class="week-bar">
   <div class="week-bar-section-left">
     <span class="week-number" id="weekNumber">--</span>
@@ -433,13 +425,11 @@
   <span class="week-range" id="weekRange">Caricamento...</span>
 </div>
 
-<!-- 🔴 Banda Dive Deep (visibile solo se ci sono scadute WK precedente) -->
 <div class="dive-deep-bar" id="diveDeepBar">
   <div class="dive-deep-title" id="diveDeepTitle">⚠️ Dive Deep WK --:</div>
   <div class="dive-deep-tasks" id="diveDeepTasks"></div>
 </div>
 
-<!-- 🚨 Alert Cards (scadute/oggi/imminenti) -->
 <div id="alerts" class="alerts"></div>
 
 <div id="status"></div>
@@ -447,7 +437,6 @@
   <div class="loading">⏳ Caricamento tasks...</div>
 </div>
 
-<!-- 🏷️ Firma Autore -->
 <div class="author-signature">Versione 2.0 by mmantone</div>
 
 <script>
@@ -462,7 +451,6 @@
 
   let isUpdating = false;
 
-  // 🌓 GESTIONE TEMA
   function initTheme() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
     applyTheme(savedTheme);
@@ -489,7 +477,6 @@
     localStorage.setItem('theme', theme);
   }
 
-  // 📅 Calcola numero settimana
   function getWeekNumber(date) {
     const target = new Date(date.valueOf());
     target.setHours(0, 0, 0, 0);
@@ -507,7 +494,6 @@
     return WEEK_REFERENCE_NUMBER + weeksDiff;
   }
 
-  // 📅 Range settimana corrente (domenica → sabato)
   function getWeekRange(date) {
     const current = new Date(date.valueOf());
     current.setHours(0, 0, 0, 0);
@@ -527,36 +513,6 @@
     };
 
     return `${format(sunday)} → ${format(saturday)}`;
-  }
-
-  // 🔙 Range WK precedente (restituisce oggetto con start/end Date e numero WK)
-  function getPreviousWeekBounds(date) {
-    const current = new Date(date.valueOf());
-    current.setHours(0, 0, 0, 0);
-
-    const dayOfWeek = current.getDay();
-
-    // Domenica della settimana corrente
-    const currentSunday = new Date(current);
-    currentSunday.setDate(current.getDate() - dayOfWeek);
-
-    // Domenica settimana precedente
-    const prevSunday = new Date(currentSunday);
-    prevSunday.setDate(currentSunday.getDate() - 7);
-    prevSunday.setHours(0, 0, 0, 0);
-
-    // Sabato settimana precedente
-    const prevSaturday = new Date(prevSunday);
-    prevSaturday.setDate(prevSunday.getDate() + 6);
-    prevSaturday.setHours(23, 59, 59, 999);
-
-    const prevWeekNum = getWeekNumber(prevSunday);
-
-    return {
-      start: prevSunday,
-      end: prevSaturday,
-      weekNum: prevWeekNum
-    };
   }
 
   function updateDateTime() {
@@ -677,10 +633,10 @@
       }
     } catch (err) {
       showError('Errore caricamento: ' + err.message);
+      console.error('❌ Errore fetch:', err);
     }
   }
 
-  // 📊 Aggiorna i chip "Aperte" e "Completate" nella week bar
   function updateWeekStats(tasks) {
     let aperte = 0, completate = 0;
 
@@ -695,7 +651,6 @@
     document.getElementById('statCompletate').textContent = completate;
   }
 
-  // 🚨 Aggiorna alert cards (scadute/oggi/imminenti) - visibili solo se > 0
   function updateAlerts(tasks) {
     const alerts = document.getElementById('alerts');
 
@@ -734,8 +689,6 @@
     alerts.innerHTML = html;
   }
 
- // 🔴 Aggiorna banda "Dive Deep WK precedente"
-  // 📊 Nuova logica: legge da StoricoScadute (campo auto-popolato da Apps Script)
   function updateDiveDeep(tasks) {
     const bar = document.getElementById('diveDeepBar');
     const title = document.getElementById('diveDeepTitle');
@@ -745,23 +698,19 @@
     const currentWK = getWeekNumber(now);
     const previousWK = currentWK - 1;
 
-    // Filtra task: StoricoScadute contiene WK precedente AND non completate
     const scaduteWKPrecedente = tasks.filter(t => {
       const isDone = t.Stato === true || t.Stato === 'TRUE' || 
                      t.Stato === 'VERO' || t.Stato === 1;
       if (isDone) return false;
 
-      // Legge StoricoScadute (nuovo campo)
       const storico = String(t.StoricoScadute || '').trim();
       if (!storico) return false;
 
-      // Parse: "40, 39, 38" → [40, 39, 38]
       const wks = storico
         .split(',')
         .map(s => parseInt(s.trim()))
         .filter(n => !isNaN(n));
 
-      // Mostra se WK precedente è nello storico
       return wks.includes(previousWK);
     });
 
@@ -772,19 +721,6 @@
 
     bar.classList.add('visible');
     title.textContent = `⚠️ Dive Deep WK ${previousWK} - ${scaduteWKPrecedente.length} ${scaduteWKPrecedente.length === 1 ? 'task non completata' : 'task non completate'}:`;
-
-    const tasksHTML = scaduteWKPrecedente.map(t => {
-      const taskName = t.Task || 'Senza nome';
-      const owner = t.Assegnato || 'N/A';
-      return `<span class="dive-deep-task-item">${taskName}<span class="owner">(${owner})</span></span>`;
-    }).join(' ');
-
-    tasksContainer.innerHTML = tasksHTML;
-  }
-
-    // Mostra banda con task scadute
-    bar.classList.add('visible');
-    title.textContent = `⚠️ Dive Deep WK ${prevWeek.weekNum} - ${scaduteWKPrecedente.length} ${scaduteWKPrecedente.length === 1 ? 'task non completata' : 'task non completate'}:`;
 
     const tasksHTML = scaduteWKPrecedente.map(t => {
       const taskName = t.Task || 'Senza nome';
